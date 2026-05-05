@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>計時器</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<style>
+body {
+  margin: 0;
+  background-color: black;
+  color: white;
+  font-family: monospace;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  box-sizing: border-box;
+}
+#timer {
+  font-size: 70vh;
+  font-weight: bold;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  box-sizing: border-box;
+  overflow:hidden;
+}
+#timer span{
+    white-space:nowrap;
+}
+button {
+  padding: 10px 20px;
+  margin: 10px;
+  font-size: 20px;
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  box-sizing: border-box;
+}
+</style>
+</head>
+<body>
+<div id="timer"><span>00:00</span></div>
+<div>
+  <button id="start">開始</button>
+  <button id="pause">暫停</button>
+  <button id="stop">停止</button>
+  <button id="reset">重新開始</button>
+</div>
+<script>
+let timeElapsed = 0;
+let isRunning = false;
+let timerInterval;
+let wakeLock = null;
+
+const timerDisplay = document.getElementById('timer').querySelector('span');
+const startButton = document.getElementById('start');
+const pauseButton = document.getElementById('pause');
+const stopButton = document.getElementById('stop');
+const resetButton = document.getElementById('reset');
+
+function formatTime(time) {
+  const minutes = Math.floor(time / 60);
+  const seconds = Math.floor(time % 60);
+  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+}
+
+function updateTimer() {
+  timeElapsed += 0.1;
+  timerDisplay.textContent = formatTime(timeElapsed);
+  adjustFontSize();
+}
+
+startButton.addEventListener('click', () => {
+  if (!isRunning) {
+    isRunning = true;
+    timerInterval = setInterval(updateTimer, 100);
+    requestWakeLock();
+  }
+});
+
+pauseButton.addEventListener('click', () => {
+  if (isRunning) {
+    isRunning = false;
+    clearInterval(timerInterval);
+    releaseWakeLock();
+  }
+});
+
+stopButton.addEventListener('click', () => {
+  isRunning = false;
+  clearInterval(timerInterval);
+  timeElapsed = 0;
+  timerDisplay.textContent = formatTime(timeElapsed);
+  adjustFontSize();
+  releaseWakeLock();
+});
+
+resetButton.addEventListener('click', () => {
+  stopButton.click();
+  startButton.click();
+});
+
+function adjustFontSize() {
+  const timerDiv = document.getElementById('timer');
+  const span = timerDiv.querySelector('span');
+  let fontSize = 70; // 初始字體大小
+
+  span.style.fontSize = fontSize * 1.2 + 'vh'; // 放大 120%
+
+  while (span.offsetWidth > timerDiv.offsetWidth || span.offsetHeight > timerDiv.offsetHeight) {
+    fontSize -= 1; // 減小字體大小
+    span.style.fontSize = fontSize * 1.2 + 'vh'; // 放大 120%
+  }
+}
+adjustFontSize();
+
+async function requestWakeLock() {
+  if ('wakeLock' in navigator) {
+    try {
+      wakeLock = await navigator.wakeLock.request('screen');
+      wakeLock.addEventListener('release', () => {
+        console.log('Wake Lock was released');
+      });
+      console.log('Wake Lock is active');
+    } catch (err) {
+      console.error(`${err.name}, ${err.message}`);
+    }
+  }
+}
+
+async function releaseWakeLock() {
+  if (wakeLock !== null) {
+    await wakeLock.release();
+    wakeLock = null;
+  }
+}
+</script>
+</body>
+</html>
